@@ -12,14 +12,16 @@ void setup_context(RenderContext *ctx, int w, int h) {
 	// Initialize the first buffer and clear its ordering table
 	// so that it can later be used for drawing.
 	ctx->active_buffer = 0;
-	ctx->next_packet = ctx->buffers[0].buffer;
-	ClearOTagR(ctx->buffers[0].ord_tbl, OT_LAYERS);
+	RenderBuffer *curr_buffer = &(ctx->buffers[ctx->active_buffer]);
+	ctx->next_packet = curr_buffer->buffer;
+	ctx->packet_buffer_end = &(curr_buffer->buffer[BUFFER_LENGTH]);
+	ClearOTagR(curr_buffer->ord_tbl, OT_LAYERS);
 
 	// Turn on the video output.
 	SetDispMask(1);
 }
 
-void set_clear_colors(RenderContext *ctx, uint8_t r, uint8_t g, uint8_t b) {
+void set_clear_colors(RenderContext *ctx, u8 r, u8 g, u8 b) {
 	// Set the default background color and enable auto-clearing.
 	setRGB0(&(ctx->buffers[0].draw_env), r, g, b);
 	setRGB0(&(ctx->buffers[1].draw_env), r, g, b);
@@ -51,6 +53,7 @@ void flip_buffers(RenderContext *ctx) {
 	// and reset the packet allocation pointer.
 	ctx->active_buffer ^= 1;
 	ctx->next_packet = disp_buffer->buffer;
+	ctx->packet_buffer_end = &(disp_buffer->buffer[BUFFER_LENGTH]);
 	ClearOTagR(disp_buffer->ord_tbl, OT_LAYERS);
 }
 
@@ -58,13 +61,13 @@ void *new_primitive(RenderContext *ctx, int z, size_t size) {
 	// Place the primitive after all previously allocated primitives, then
 	// insert it into the OT and bump the allocation pointer.
 	RenderBuffer *buffer = &(ctx->buffers[ctx->active_buffer]);
-	uint8_t      *prim = ctx->next_packet;
+	void         *prim = ctx->next_packet;
 
 	addPrim(&(buffer->ord_tbl[z]), prim);
 	ctx->next_packet += size;
 
 	// Make sure we haven't yet run out of space for future primitives.
-	assert(ctx->next_packet <= &(buffer->buffer[BUFFER_LENGTH]));
+	assert(ctx->next_packet <= ctx->packet_buffer_end);
 
 	return (void *)prim;
 }

@@ -5,13 +5,15 @@
  * (C) 2020-2026 Lameguy64, spicyjpeg - MPL licensed
  */
 
-#include <stdbool.h> // -> bool, true false
-#include <stddef.h>  // -> size_t, ptrdiff_t, NULL
-#include <stdint.h>  // -> uint32_t, etc..
+#include "types.h"
 
 #include <libetc.h>  // -> Fnt*, etc..
 #include <libgte.h>  // geometry transformation engine
-#include <libgpu.h>  // primitive structs and macros (needs defs from gte)
+#include <libgpu.h>  // primitive structs and macros
+
+// libgpu needs stuff from libgte and some antiquated types from
+// sys/types (see https://stackoverflow.com/a/1918960/).
+
 // #include <psxapi.h> // i dont need this; it's hardware shit
 
 #include <stdio.h>  // -> printf
@@ -27,7 +29,7 @@
 
 #define sizeofarr(x) (sizeof(x) / sizeof(*(x)))
 
-// A simple helper for drawing text using PSn00bSDK's debug font API. Note that
+// A simple helper for drawing text using [whatever]'s debug font API. Note that
 // FntSort() requires the debug font texture to be uploaded to VRAM beforehand
 // by calling FntLoad().
 void draw_text(RenderContext *ctx, int x, int y, int z, const char *text) {
@@ -36,10 +38,12 @@ void draw_text(RenderContext *ctx, int x, int y, int z, const char *text) {
 	// Pretty much loops over the character buffer and makes a sprite packet
 	// for each character. Yes it spends your freaking packet budget...
 
-	// ctx->next_packet =
-	// 	(uint8_t *)FntSort(&(buffer->ord_tbl[z]), ctx->next_packet, x, y, text);
+	// TODO: FntSort is relatively simple to make from scratch. make it.
 
-	assert(ctx->next_packet <= &(buffer->buffer[BUFFER_LENGTH]));
+	// ctx->next_packet =
+	// 	(u8 *)FntSort(&(buffer->ord_tbl[z]), ctx->next_packet, x, y, text);
+
+	assert(ctx->next_packet <= ctx->packet_buffer_end);
 }
 
 /* Main */
@@ -153,8 +157,8 @@ int main(int argc, const char **argv) {
 			/**/ right_half_ofs, 239,
 			/**/ right_half_ofs + SCREEN_SIZE_X / 2, 239);
 
-		DR_MOVE *last_frame = (DR_MOVE *)new_primitive(
-			&ctx, 0, sizeof(DR_MOVE) + sizeof(uint32_t[4]));
+		DR_MOVE *last_frame =
+			(DR_MOVE *)new_primitive(&ctx, 0, sizeof(DR_MOVE) + sizeof(u32[4]));
 		RECT source_rect;
 		source_rect.x = 0;
 		source_rect.y = (ctx.active_buffer) * SCREEN_SIZE_Y;
@@ -164,7 +168,7 @@ int main(int argc, const char **argv) {
 
 		// Draw some text in front of the square (Z = 0, primitives with higher
 		// Z indices are drawn first and thus drawn "behind" this).
-		draw_text(&ctx, 8, 16, 0, "Hello, world 2!");
+		draw_text(&ctx, 8, 16, 0, "Hello, world 3!");
 		char clock_buff[8];
 		sprintf(clock_buff, /* sizeofarr(clock_buff), */ "c: %04d", frames);
 		draw_text(&ctx, 12, 24, 0, clock_buff);
