@@ -33,17 +33,65 @@
 // FntSort() requires the debug font texture to be uploaded to VRAM beforehand
 // by calling FntLoad().
 void draw_text(RenderContext *ctx, int x, int y, int z, const char *text) {
-	RenderBuffer *buffer = &(ctx->buffers[ctx->active_buffer]);
+	// The default font is stored as 4-bit sprites. Examples typically put the
+	// texture at (960, 0). The FntLoad function also loads the needed CLUT
+	// (consisting entirely of transparent and white entries only) and places
+	// it 128 pixels below the specified position, so typically (960, 128).
+	//
+	// The texture is 16x8 tiles, each 8x8 pixel squares. The texture starts
+	// with the first printable character, the space. Yea
+
+	// TODO: can i like. find the font global state and use that
+	// instead of hard-coding the texture's position like this?
+	short clut = GetClut(960, 0 + 128);
 
 	// Pretty much loops over the character buffer and makes a sprite packet
 	// for each character. Yes it spends your freaking packet budget...
 
-	// TODO: FntSort is relatively simple to make from scratch. make it.
+	usize lx = x, ly = y;
+	for (const char *curr = text; *curr != '\0'; curr++) {
+		char c = *curr;
 
-	// ctx->next_packet =
-	// 	(u8 *)FntSort(&(buffer->ord_tbl[z]), ctx->next_packet, x, y, text);
+		// Line break
+		if (c == '\n') {
+			lx = x;
+			ly += 8;
+			continue;
+		}
 
-	assert(ctx->next_packet <= ctx->packet_buffer_end);
+		// Tab stop
+		if (c == '\t') {
+			lx -= x;
+			const int tab_stop = 4;
+			lx = ((lx >> (tab_stop + 2)) + 1) << (tab_stop + 2);
+			lx += x;
+			continue;
+		}
+
+		// All caps
+		if (c >= 'a' && c <= 'z') c -= ('a' - 'A');
+
+		if (c >= ' ' && c <= '_') {
+			c -= ' ';
+
+			SPRT_8 *spr = (SPRT_8 *)new_primitive(ctx, z, sizeof(SPRT_8));
+
+			setSprt8(spr);
+			setShadeTex(spr, 1);
+			setSemiTrans(spr, 0);
+			// setRGB0(spr, 255, 255, 255);
+			setXY0(spr, lx, ly);
+			int u = (c % 16) * 8;
+			int v = (c / 16) * 8;
+			setUV0(spr, u, v);
+			spr->clut = clut;
+		}
+
+		lx += 8;
+	}
+
+	DR_TPAGE *tp = (DR_TPAGE *)new_primitive(ctx, z, sizeof(DR_TPAGE));
+	setDrawTPage(tp, 0, 0, 15);
 }
 
 /* Main */
@@ -80,7 +128,7 @@ void draw_box(bounce_box *b, RenderContext *ctx) {
 	setRGB0(tile, 255, 255, 0);
 }
 
-int main(int argc, const char **argv) {
+int main(void) {
 	// Make a freaking render context.
 	RenderContext ctx;
 
@@ -103,8 +151,8 @@ int main(int argc, const char **argv) {
 		// Update the position and velocity of the bouncing square.
 		update_box(&box);
 
-		// Draw the square by allocating a TILE (i.e. untextured solid color
-		// rectangle) primitive at Z = 1.
+		// Draw the square by allocating a TILE primitive at Z = 1.
+		// (Tiles are just untextured solid-color rectangles)
 		draw_box(&box, &ctx);
 
 		POLY_G3 *triangle = (POLY_G3 *)new_primitive(&ctx, 2, sizeof(POLY_G3));
@@ -121,7 +169,7 @@ int main(int argc, const char **argv) {
 		setRGB1(triangle, 0, 255, 0);
 		setRGB2(triangle, 0, 0, 255);
 
-		int oscillate = isin(frames << 7) >> 10;
+		int oscillate = isin(frames << 7) >> 11;
 
 		POLY_FT4 *quad = (POLY_FT4 *)new_primitive(&ctx, 2, sizeof(POLY_FT4));
 
@@ -131,7 +179,7 @@ int main(int argc, const char **argv) {
 			/**/ SCREEN_SIZE_X / 2, 16,
 			/**/ 16 + oscillate, SCREEN_SIZE_Y - 16,
 			/**/ SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 16);
-		setRGB0(quad, 192, 192, 192);
+		setRGB0(quad, 160, 160, 160);
 		setTPage(quad, 2, 1, SCREEN_SIZE_X, 0);
 		setUV4(quad,
 			/**/ 0, 0,
@@ -149,7 +197,7 @@ int main(int argc, const char **argv) {
 			/**/ SCREEN_SIZE_X - (24 + oscillate), 16,
 			/**/ SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 16,
 			/**/ SCREEN_SIZE_X - (16 + oscillate), SCREEN_SIZE_Y - 16);
-		setRGB0(quad, 192, 192, 192);
+		setRGB0(quad, 160, 160, 160);
 		setTPage(quad, 2, 1, SCREEN_SIZE_X + SCREEN_SIZE_X / 2, 0);
 		setUV4(quad,
 			/**/ right_half_ofs, 0,
@@ -158,7 +206,7 @@ int main(int argc, const char **argv) {
 			/**/ right_half_ofs + SCREEN_SIZE_X / 2, 239);
 
 		DR_MOVE *last_frame =
-			(DR_MOVE *)new_primitive(&ctx, 0, sizeof(DR_MOVE) + sizeof(u32[4]));
+			(DR_MOVE *)new_primitive(&ctx, 0, sizeof(DR_MOVE));
 		RECT source_rect;
 		source_rect.x = 0;
 		source_rect.y = (ctx.active_buffer) * SCREEN_SIZE_Y;
@@ -169,6 +217,8 @@ int main(int argc, const char **argv) {
 		// Draw some text in front of the square (Z = 0, primitives with higher
 		// Z indices are drawn first and thus drawn "behind" this).
 		draw_text(&ctx, 8, 16, 0, "Hello, world 3!");
+
+		// Draw a frames clock...
 		char clock_buff[8];
 		sprintf(clock_buff, /* sizeofarr(clock_buff), */ "c: %04d", frames);
 		draw_text(&ctx, 12, 24, 0, clock_buff);
