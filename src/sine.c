@@ -8,11 +8,10 @@
 // that's what optimizing compilers were made for, guise.
 
 static inline int _isin(int qN, int x) {
-	int              c, x2, y;
 	static const int qA = 12;
 	static const int B = 19900, C = 3516;
 
-	c = x << (30 - qN);            // Semi-circle info into carry.
+	int c = x << (30 - qN);        // Semi-circle info into carry.
 	x -= 1 << qN;                  // sine -> cosine calc
 
 	x <<= (31 - qN);               // Mask with PI
@@ -20,7 +19,7 @@ static inline int _isin(int qN, int x) {
 	x *= x;
 	x >>= (2 * qN - 14);           // x=x^2 To Q14
 
-	y = B - (x * C >> 14);         // B - x^2*C
+	int y = B - (x * C >> 14);     // B - x^2*C
 	y = (1 << qA) - (x * y >> 16); // A - x^2*(B-x^2*C)
 
 	return (c >= 0) ? y : (-y);

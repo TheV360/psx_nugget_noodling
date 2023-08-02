@@ -1,13 +1,13 @@
 #pragma once
 
-#include "types.h"   // -> integer, boolean, pointer
+#include "../types.h" // -> integer, boolean, pointer
 
-#include <libetc.h>  // -> VSync
-#include <libgte.h>  // (needed for libgpu to not error)
-#include <libgpu.h>  // -> DISPENV, DRAWENV
+#include <libetc.h>   // -> VSync
+#include <libgte.h>   // (needed for libgpu to not error)
+#include <libgpu.h>   // -> DISPENV, DRAWENV
 
-#include <stdio.h>   // -> printf
-#include <stdlib.h>  // -> exit
+#include <stdio.h>    // -> printf
+#include <stdlib.h>   // -> exit
 
 // Length of the ordering table, i.e. the range Z coordinates can have, 0-7 in
 // this case. Larger values will allow for more granularity with depth (useful

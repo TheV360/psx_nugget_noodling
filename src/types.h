@@ -24,3 +24,5 @@ typedef __INT64_TYPE__ s64;
 
 typedef __SIZE_TYPE__    usize;
 typedef __PTRDIFF_TYPE__ ssize;
+
+#define sizeofarr(x) (sizeof(x) / sizeof(*(x)))

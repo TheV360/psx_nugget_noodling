@@ -1,6 +1,6 @@
 TARGET = build/out
 
-SRCS = src/sine.c src/context.c src/main.c \
+SRCS = src/sine.c src/system/graphics.c src/system/gamepad.c src/main.c \
 
 CFLAGS = -Wall -Wpedantic -Wextra
 

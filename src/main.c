@@ -23,11 +23,10 @@
 
 #include "fixed_point.h"
 
-#include "context.h" // -> RenderContext
+#include "system/gamepad.h"     // -> GamepadState
+#include "system/graphics.h"    // -> RenderContext
 
-#include "sine.h"    // -> isin, icos
-
-#define sizeofarr(x) (sizeof(x) / sizeof(*(x)))
+#include "sine.h"               // -> isin, icos
 
 // A simple helper for drawing text using [whatever]'s debug font API. Note that
 // FntSort() requires the debug font texture to be uploaded to VRAM beforehand
@@ -129,18 +128,23 @@ void draw_box(bounce_box *b, RenderContext *ctx) {
 }
 
 int main(void) {
-	// Make a freaking render context.
+	// Make and set up a controllers listener.
+	GamepadState ctl;
+	setup_gamepad(&ctl);
+
+	// Make a rendering context.
 	RenderContext ctx;
 
-	// Initialize the GPU and associated interrupts.
+	// Before setting anything up, first
+	// initialize the GPU and associated interrupts.
 	ResetGraph(0);
 
-	// Load the default font texture provided by [whoever] at (960, 0) in VRAM.
-	FntLoad(960, 0);
-
-	// Set up our rendering context.
+	// Set up the rendering context.
 	setup_context(&ctx, SCREEN_SIZE_X, SCREEN_SIZE_Y);
 	set_clear_colors(&ctx, 63, 0, 127);
+
+	// Load the default font texture into (960, 0) in VRAM.
+	FntLoad(960, 0);
 
 	bounce_box box;
 	setup_box(&box);
