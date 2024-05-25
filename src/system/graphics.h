@@ -30,9 +30,10 @@ typedef struct {
 
 typedef struct {
 	RenderBuffer buffers[2];
-	void        *next_packet;
-	void        *packet_buffer_end;
-	u8           active_buffer;
+
+	void *next_packet;
+	void *packet_buffer_end;
+	u8    active_buffer;
 } RenderContext;
 
 void setup_context(RenderContext *ctx, int w, int h);

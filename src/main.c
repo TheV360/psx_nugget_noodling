@@ -155,6 +155,8 @@ int main(void) {
 	int frames = 0;
 
 	while (true) {
+		update_gamepad(&ctl);
+
 		// Update the position and velocity of the bouncing square.
 		update_box(&box);
 
@@ -229,6 +231,27 @@ int main(void) {
 		char clock_buff[8];
 		sprintf(clock_buff, /* sizeofarr(clock_buff), */ "c: %04d", frames);
 		draw_text(&ctx, 12, 24, 0, clock_buff);
+
+		char ctl_buff[24];
+		sprintf(ctl_buff, /* sizeofarr(ctl_buff), */
+			"btn: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+			(ctl.buffer[0].button & PAD_SELECT) ? '_' : 'S' /*'s'*/,
+			(ctl.buffer[0].button & PAD_L3) ? '_' : 'L' /*'l'*/,
+			(ctl.buffer[0].button & PAD_R3) ? '_' : 'R' /*'r'*/,
+			(ctl.buffer[0].button & PAD_START) ? '_' : 'S' /*'s'*/,
+			(ctl.buffer[0].button & PAD_UP) ? '_' : '^' /*'u'*/,
+			(ctl.buffer[0].button & PAD_RIGHT) ? '_' : '>' /*'r'*/,
+			(ctl.buffer[0].button & PAD_DOWN) ? '_' : 'v' /*'d'*/,
+			(ctl.buffer[0].button & PAD_LEFT) ? '_' : '<' /*'l'*/,
+			(ctl.buffer[0].button & PAD_L2) ? '_' : 'L' /*'l'*/,
+			(ctl.buffer[0].button & PAD_R2) ? '_' : 'R' /*'r'*/,
+			(ctl.buffer[0].button & PAD_L1) ? '_' : 'L' /*'l'*/,
+			(ctl.buffer[0].button & PAD_R1) ? '_' : 'R' /*'r'*/,
+			(ctl.buffer[0].button & PAD_TRIANGLE) ? '_' : 'T' /*'t'*/,
+			(ctl.buffer[0].button & PAD_CIRCLE) ? '_' : 'O' /*'o'*/,
+			(ctl.buffer[0].button & PAD_CROSS) ? '_' : 'X' /*'x'*/,
+			(ctl.buffer[0].button & PAD_SQUARE) ? '_' : 'Q' /*'q'*/);
+		draw_text(&ctx, 12, 220, 0, ctl_buff);
 
 		flip_buffers(&ctx);
 

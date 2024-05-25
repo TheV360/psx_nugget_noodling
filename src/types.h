@@ -12,6 +12,11 @@
 
 // don't tell anyone this is how i live.
 
+// this is probably a good idea because many PSX libraries expect `char *`.
+// `char` without any type qualifier is technically not the same type as
+// both `unsigned char` and `signed char`.
+typedef char byte;
+
 typedef __UINT8_TYPE__  u8;
 typedef __UINT16_TYPE__ u16;
 typedef __UINT32_TYPE__ u32;

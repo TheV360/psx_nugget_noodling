@@ -57,14 +57,14 @@ void flip_buffers(RenderContext *ctx) {
 	ClearOTagR(disp_buffer->ord_tbl, OT_LAYERS);
 }
 
-void *new_primitive(RenderContext *ctx, int z, size_t size) {
+void *new_primitive(RenderContext *ctx, int z, usize size) {
 	// Place the primitive after all previously allocated primitives, then
 	// insert it into the OT and bump the allocation pointer.
 	RenderBuffer *buffer = &(ctx->buffers[ctx->active_buffer]);
 	void         *prim = ctx->next_packet;
 
 	addPrim(&(buffer->ord_tbl[z]), prim);
-	ctx->next_packet += size;
+	ctx->next_packet = ((u8 *)(ctx->next_packet)) + size;
 
 	// Make sure we haven't yet run out of space for future primitives.
 	assert(ctx->next_packet <= ctx->packet_buffer_end);
