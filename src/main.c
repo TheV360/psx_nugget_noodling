@@ -26,7 +26,7 @@
 #include "system/gamepad.h"     // -> GamepadState
 #include "system/graphics.h"    // -> RenderContext
 
-#include "sine.h"               // -> isin, icos
+#include "helper/sine.h" // -> isin, icos
 
 // A simple helper for drawing text using [whatever]'s debug font API. Note that
 // FntSort() requires the debug font texture to be uploaded to VRAM beforehand
@@ -111,8 +111,11 @@ void setup_box(bounce_box *b) {
 }
 
 void update_box(bounce_box *b) {
-	if (b->x < 0 || b->x >= (SCREEN_SIZE_X - b->sx)) b->dx = -b->dx;
-	if (b->y < 0 || b->y >= (SCREEN_SIZE_Y - b->sy)) b->dy = -b->dy;
+	if (b->x < 0) b->dx = +1;
+	if (b->y < 0) b->dy = +1;
+
+	if (b->x >= (SCREEN_SIZE_X - b->sx)) b->dx = -1;
+	if (b->y >= (SCREEN_SIZE_Y - b->sy)) b->dy = -1;
 
 	b->x += b->dx;
 	b->y += b->dy;
