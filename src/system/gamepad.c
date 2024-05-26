@@ -8,7 +8,7 @@ void setup_gamepad(GamepadState *ctl) {
 
 	for (usize i = 0; i < sizeofarr(ctl->buffer); i++) {
 		// Make sure first-frame state is "nothing" rather than "invalid".
-		ctl->button[i].internal.previous = ctl->buffer[i].button = (u16)0xFFFF;
+		ctl->button[i].internal.previous = ctl->buffer[i].button = (u16)-1;
 
 		// Set up watches
 		ctl->button[i].internal.watch = &(ctl->buffer[i].button);
@@ -31,12 +31,18 @@ void update_gamepad(GamepadState *ctl) {
 }
 
 void update_watcher(GamepadButtonWatcher *button) {
-	u16 current = !*(button->internal.watch);
+	u16 current = ~*(button->internal.watch);
 	u16 previous = button->internal.previous;
 	button->internal.previous = current;
 
-	button->pressed = current ^ !previous;
-	button->released = previous ^ !current;
+	u16 different = current ^ previous;
+	button->pressed = different & current;
+	button->released = different & previous;
 
-	// TODO: implement `hold_time` lol
+	for (usize i = 0; i < BTN_MAX; i++) {
+		if (current & (1 << i))
+			button->hold_time[i] += (button->hold_time[i] >= (u8)-1) ? 0 : 1;
+		else
+			button->hold_time[i] = 0;
+	}
 }

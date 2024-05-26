@@ -2,22 +2,25 @@
 
 #include "../types.h"
 
-#define PAD_SELECT   (1 << 0)
-#define PAD_L3       (1 << 1)
-#define PAD_R3       (1 << 2)
-#define PAD_START    (1 << 3)
-#define PAD_UP       (1 << 4)
-#define PAD_RIGHT    (1 << 5)
-#define PAD_DOWN     (1 << 6)
-#define PAD_LEFT     (1 << 7)
-#define PAD_L2       (1 << 8)
-#define PAD_R2       (1 << 9)
-#define PAD_L1       (1 << 10)
-#define PAD_R1       (1 << 11)
-#define PAD_TRIANGLE (1 << 12)
-#define PAD_CIRCLE   (1 << 13)
-#define PAD_CROSS    (1 << 14)
-#define PAD_SQUARE   (1 << 15)
+typedef enum {
+	BTN_SELECT = 0,
+	BTN_L3,
+	BTN_R3,
+	BTN_START,
+	BTN_UP,
+	BTN_RIGHT,
+	BTN_DOWN,
+	BTN_LEFT,
+	BTN_L2,
+	BTN_R2,
+	BTN_L1,
+	BTN_R1,
+	BTN_TRIANGLE,
+	BTN_CIRCLE,
+	BTN_CROSS,
+	BTN_SQUARE,
+	BTN_MAX
+} GamepadButtons;
 
 typedef struct {
 	u8 status;

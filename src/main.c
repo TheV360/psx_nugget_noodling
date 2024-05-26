@@ -110,7 +110,24 @@ void setup_box(bounce_box *b) {
 	b->dx = b->dy = 1;
 }
 
-void update_box(bounce_box *b) {
+void update_box(bounce_box *b, GamepadState *ctl) {
+	if (ctl->button[0].hold_time[BTN_UP]) {
+		b->dy = -1;
+		b->y--;
+	}
+	if (ctl->button[0].hold_time[BTN_DOWN]) {
+		b->dy = +1;
+		b->y++;
+	}
+	if (ctl->button[0].hold_time[BTN_LEFT]) {
+		b->dx = -1;
+		b->x--;
+	}
+	if (ctl->button[0].hold_time[BTN_RIGHT]) {
+		b->dx = +1;
+		b->x++;
+	}
+
 	if (b->x < 0) b->dx = +1;
 	if (b->y < 0) b->dy = +1;
 
@@ -158,7 +175,7 @@ int main(void) {
 		update_gamepad(&ctl);
 
 		// Update the position and velocity of the bouncing square.
-		update_box(&box);
+		update_box(&box, &ctl);
 
 		// Draw the square by allocating a TILE primitive at Z = 1.
 		// (Tiles are just untextured solid-color rectangles)
@@ -233,24 +250,38 @@ int main(void) {
 		draw_text(&ctx, 12, 24, 0, clock_buff);
 
 		char ctl_buff[24];
+		u8    huh = (frames >> 7) & 3;
+		char *what //
+			= huh == 0 ? "raw"
+			: huh == 1 ? "pressed"
+			: huh == 2 ? "released"
+					   : "prev raw";
+		u16 btn //
+			= huh == 0 ? ~ctl.buffer[0].button
+			: huh == 1 ? ctl.button[0].pressed
+			: huh == 2 ? ctl.button[0].released
+					   : ctl.button[0].internal.previous;
+
 		sprintf(ctl_buff, /* sizeofarr(ctl_buff), */
 			"btn: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-			(ctl.buffer[0].button & PAD_SELECT) ? '_' : 'S' /*'s'*/,
-			(ctl.buffer[0].button & PAD_L3) ? '_' : 'L' /*'l'*/,
-			(ctl.buffer[0].button & PAD_R3) ? '_' : 'R' /*'r'*/,
-			(ctl.buffer[0].button & PAD_START) ? '_' : 'S' /*'s'*/,
-			(ctl.buffer[0].button & PAD_UP) ? '_' : '^' /*'u'*/,
-			(ctl.buffer[0].button & PAD_RIGHT) ? '_' : '>' /*'r'*/,
-			(ctl.buffer[0].button & PAD_DOWN) ? '_' : 'v' /*'d'*/,
-			(ctl.buffer[0].button & PAD_LEFT) ? '_' : '<' /*'l'*/,
-			(ctl.buffer[0].button & PAD_L2) ? '_' : 'L' /*'l'*/,
-			(ctl.buffer[0].button & PAD_R2) ? '_' : 'R' /*'r'*/,
-			(ctl.buffer[0].button & PAD_L1) ? '_' : 'L' /*'l'*/,
-			(ctl.buffer[0].button & PAD_R1) ? '_' : 'R' /*'r'*/,
-			(ctl.buffer[0].button & PAD_TRIANGLE) ? '_' : 'T' /*'t'*/,
-			(ctl.buffer[0].button & PAD_CIRCLE) ? '_' : 'O' /*'o'*/,
-			(ctl.buffer[0].button & PAD_CROSS) ? '_' : 'X' /*'x'*/,
-			(ctl.buffer[0].button & PAD_SQUARE) ? '_' : 'Q' /*'q'*/);
+			(btn & (1 << BTN_SELECT)) ? 'S' : '_' /*'s'*/,
+			(btn & (1 << BTN_L3)) ? 'L' : '_' /*'l'*/,
+			(btn & (1 << BTN_R3)) ? 'R' : '_' /*'r'*/,
+			(btn & (1 << BTN_START)) ? 'S' : '_' /*'s'*/,
+			(btn & (1 << BTN_UP)) ? '^' : '_' /*'u'*/,
+			(btn & (1 << BTN_RIGHT)) ? '>' : '_' /*'r'*/,
+			(btn & (1 << BTN_DOWN)) ? 'v' : '_' /*'d'*/,
+			(btn & (1 << BTN_LEFT)) ? '<' : '_' /*'l'*/,
+			(btn & (1 << BTN_L2)) ? 'L' : '_' /*'l'*/,
+			(btn & (1 << BTN_R2)) ? 'R' : '_' /*'r'*/,
+			(btn & (1 << BTN_L1)) ? 'L' : '_' /*'l'*/,
+			(btn & (1 << BTN_R1)) ? 'R' : '_' /*'r'*/,
+			(btn & (1 << BTN_TRIANGLE)) ? 'T' : '_' /*'t'*/,
+			(btn & (1 << BTN_CIRCLE)) ? 'O' : '_' /*'o'*/,
+			(btn & (1 << BTN_CROSS)) ? 'X' : '_' /*'x'*/,
+			(btn & (1 << BTN_SQUARE)) ? 'Q' : '_' /*'q'*/);
+
+		draw_text(&ctx, 12, 212, 0, what);
 		draw_text(&ctx, 12, 220, 0, ctl_buff);
 
 		flip_buffers(&ctx);
