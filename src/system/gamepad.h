@@ -46,7 +46,7 @@ typedef struct {
 	} internal;
 	// just to compartmentalize the counterintuitive inverted raw data.
 
-	u8 hold_time[16];
+	u8 hold_time[BTN_MAX];
 
 	u16 pressed;
 	u16 released;
