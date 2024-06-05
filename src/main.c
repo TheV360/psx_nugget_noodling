@@ -147,13 +147,118 @@ void draw_box(bounce_box *b, RenderContext *ctx) {
 	setRGB0(tile, 255, 255, 0);
 }
 
+void draw_tri(RenderContext *ctx, int frames) {
+	POLY_G3 *triangle = (POLY_G3 *)new_primitive(ctx, 2, sizeof(POLY_G3));
+
+	int tri_x = icos(frames << 6) >> 9;
+	int tri_y = isin(frames << 5) >> 9;
+
+	setPolyG3(triangle);
+	setXY3(triangle,
+		/**/ 48 + tri_x, 32 + tri_y,
+		/**/ 32 - tri_x, 48 + tri_y,
+		/**/ 64 + tri_x, 48 - tri_y);
+	setRGB0(triangle, 255, 0, 0);
+	setRGB1(triangle, 0, 255, 0);
+	setRGB2(triangle, 0, 0, 255);
+}
+
+void draw_oscillating_mirror_rect(RenderContext *ctx, int frames) {
+	int oscillate = isin(frames << 6) >> 11;
+
+	POLY_FT4 *quad = (POLY_FT4 *)new_primitive(ctx, 2, sizeof(POLY_FT4));
+
+	setPolyFT4(quad);
+	setXY4(quad,
+		/**/ 24 + oscillate, 16,
+		/**/ SCREEN_SIZE_X / 2, 16,
+		/**/ 16 + oscillate, SCREEN_SIZE_Y - 16,
+		/**/ SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 16);
+	setRGB0(quad, 160, 160, 160);
+	setTPage(quad, 2, 1, SCREEN_SIZE_X, 0);
+	setUV4(quad,
+		/**/ 0, 0,
+		/**/ SCREEN_SIZE_X / 2, 0,
+		/**/ 0, 239,
+		/**/ SCREEN_SIZE_X / 2, 239);
+
+	quad = (POLY_FT4 *)new_primitive(ctx, 2, sizeof(POLY_FT4));
+	int right_half_ofs = (SCREEN_SIZE_X / 2) - ((SCREEN_SIZE_X / 2 / 64) * 64);
+
+	setPolyFT4(quad);
+	setXY4(quad,
+		/**/ SCREEN_SIZE_X / 2, 16,
+		/**/ SCREEN_SIZE_X - (24 + oscillate), 16,
+		/**/ SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 16,
+		/**/ SCREEN_SIZE_X - (16 + oscillate), SCREEN_SIZE_Y - 16);
+	setRGB0(quad, 160, 160, 160);
+	setTPage(quad, 2, 1, SCREEN_SIZE_X + SCREEN_SIZE_X / 2, 0);
+	setUV4(quad,
+		/**/ right_half_ofs, 0,
+		/**/ right_half_ofs + SCREEN_SIZE_X / 2, 0,
+		/**/ right_half_ofs, 239,
+		/**/ right_half_ofs + SCREEN_SIZE_X / 2, 239);
+}
+
+void copy_frame_to_vram(RenderContext *ctx) {
+	DR_MOVE *last_frame = (DR_MOVE *)new_primitive(ctx, 1, sizeof(DR_MOVE));
+	RECT     source_rect;
+	source_rect.x = 0;
+	source_rect.y = (ctx->active_buffer) * SCREEN_SIZE_Y;
+	source_rect.w = SCREEN_SIZE_X;
+	source_rect.h = SCREEN_SIZE_Y;
+	SetDrawMove(last_frame, &source_rect, SCREEN_SIZE_X, 0);
+}
+
+void draw_ctl_monitor(RenderContext *ctx, GamepadState *ctl, int page) {
+	char  ctl_buff[24];
+	char *ctl_text_label //
+		= page == 0 ? "raw"
+		: page == 1 ? "pressed"
+		: page == 2 ? "released"
+					: "prev raw";
+	u16 btn //
+		= page == 0 ? ~ctl->buffer[0].button
+		: page == 1 ? ctl->button[0].pressed
+		: page == 2 ? ctl->button[0].released
+					: ctl->button[0].internal.previous;
+
+	sprintf(ctl_buff, /* sizeofarr(ctl_buff), */
+		"btn: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
+		(btn & (1 << BTN_SELECT)) ? 'S' : '_' /*'s'*/,
+		(btn & (1 << BTN_L3)) ? 'L' : '_' /*'l'*/,
+		(btn & (1 << BTN_R3)) ? 'R' : '_' /*'r'*/,
+		(btn & (1 << BTN_START)) ? 'S' : '_' /*'s'*/,
+		(btn & (1 << BTN_UP)) ? '^' : '_' /*'u'*/,
+		(btn & (1 << BTN_RIGHT)) ? '>' : '_' /*'r'*/,
+		(btn & (1 << BTN_DOWN)) ? 'v' : '_' /*'d'*/,
+		(btn & (1 << BTN_LEFT)) ? '<' : '_' /*'l'*/,
+		(btn & (1 << BTN_L2)) ? 'L' : '_' /*'l'*/,
+		(btn & (1 << BTN_R2)) ? 'R' : '_' /*'r'*/,
+		(btn & (1 << BTN_L1)) ? 'L' : '_' /*'l'*/,
+		(btn & (1 << BTN_R1)) ? 'R' : '_' /*'r'*/,
+		(btn & (1 << BTN_TRIANGLE)) ? 'T' : '_' /*'t'*/,
+		(btn & (1 << BTN_CIRCLE)) ? 'O' : '_' /*'o'*/,
+		(btn & (1 << BTN_CROSS)) ? 'X' : '_' /*'x'*/,
+		(btn & (1 << BTN_SQUARE)) ? 'Q' : '_' /*'q'*/);
+
+	draw_text(ctx, 12, 212, 0, ctl_text_label);
+	draw_text(ctx, 12, 220, 0, ctl_buff);
+}
+
+void draw_frame_count(RenderContext *ctx, int frames) {
+	char clock_buff[8];
+	sprintf(clock_buff, /* sizeofarr(clock_buff), */ "c: %04d", frames);
+	draw_text(ctx, 12, 24, 0, clock_buff);
+}
+
 int main(void) {
 	// Make and set up a controllers listener.
-	GamepadState ctl;
+	static GamepadState ctl;
 	setup_gamepad(&ctl);
 
 	// Make a rendering context.
-	RenderContext ctx;
+	static RenderContext ctx;
 
 	// Before setting anything up, first
 	// initialize the GPU and associated interrupts.
@@ -162,9 +267,15 @@ int main(void) {
 	// Set up the rendering context.
 	setup_context(&ctx, SCREEN_SIZE_X, SCREEN_SIZE_Y);
 	set_clear_colors(&ctx, 63, 0, 127);
+	// TODO: what about PAL?
 
 	// Load the default font texture into (960, 0) in VRAM.
 	FntLoad(960, 0);
+
+	// // Set up the perspective context??
+	// InitGeom();
+	// SetGeomOffset(SCREEN_SIZE_X / 2, SCREEN_SIZE_Y / 2);
+	// SetGeomScreen(SCREEN_SIZE_Y / 2);
 
 	bounce_box box;
 	setup_box(&box);
@@ -181,108 +292,20 @@ int main(void) {
 		// (Tiles are just untextured solid-color rectangles)
 		draw_box(&box, &ctx);
 
-		POLY_G3 *triangle = (POLY_G3 *)new_primitive(&ctx, 2, sizeof(POLY_G3));
+		draw_tri(&ctx, frames);
 
-		int tri_x = icos(frames << 6) >> 9;
-		int tri_y = isin(frames << 5) >> 9;
+		draw_oscillating_mirror_rect(&ctx, frames);
 
-		setPolyG3(triangle);
-		setXY3(triangle,
-			/**/ 48 + tri_x, 32 + tri_y,
-			/**/ 32 - tri_x, 48 + tri_y,
-			/**/ 64 + tri_x, 48 - tri_y);
-		setRGB0(triangle, 255, 0, 0);
-		setRGB1(triangle, 0, 255, 0);
-		setRGB2(triangle, 0, 0, 255);
-
-		int oscillate = isin(frames << 7) >> 11;
-
-		POLY_FT4 *quad = (POLY_FT4 *)new_primitive(&ctx, 2, sizeof(POLY_FT4));
-
-		setPolyFT4(quad);
-		setXY4(quad,
-			/**/ 24 + oscillate, 16,
-			/**/ SCREEN_SIZE_X / 2, 16,
-			/**/ 16 + oscillate, SCREEN_SIZE_Y - 16,
-			/**/ SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 16);
-		setRGB0(quad, 160, 160, 160);
-		setTPage(quad, 2, 1, SCREEN_SIZE_X, 0);
-		setUV4(quad,
-			/**/ 0, 0,
-			/**/ SCREEN_SIZE_X / 2, 0,
-			/**/ 0, 239,
-			/**/ SCREEN_SIZE_X / 2, 239);
-
-		quad = (POLY_FT4 *)new_primitive(&ctx, 2, sizeof(POLY_FT4));
-		int right_half_ofs =
-			(SCREEN_SIZE_X / 2) - ((SCREEN_SIZE_X / 2 / 64) * 64);
-
-		setPolyFT4(quad);
-		setXY4(quad,
-			/**/ SCREEN_SIZE_X / 2, 16,
-			/**/ SCREEN_SIZE_X - (24 + oscillate), 16,
-			/**/ SCREEN_SIZE_X / 2, SCREEN_SIZE_Y - 16,
-			/**/ SCREEN_SIZE_X - (16 + oscillate), SCREEN_SIZE_Y - 16);
-		setRGB0(quad, 160, 160, 160);
-		setTPage(quad, 2, 1, SCREEN_SIZE_X + SCREEN_SIZE_X / 2, 0);
-		setUV4(quad,
-			/**/ right_half_ofs, 0,
-			/**/ right_half_ofs + SCREEN_SIZE_X / 2, 0,
-			/**/ right_half_ofs, 239,
-			/**/ right_half_ofs + SCREEN_SIZE_X / 2, 239);
-
-		DR_MOVE *last_frame =
-			(DR_MOVE *)new_primitive(&ctx, 0, sizeof(DR_MOVE));
-		RECT source_rect;
-		source_rect.x = 0;
-		source_rect.y = (ctx.active_buffer) * SCREEN_SIZE_Y;
-		source_rect.w = SCREEN_SIZE_X;
-		source_rect.h = SCREEN_SIZE_Y;
-		SetDrawMove(last_frame, &source_rect, SCREEN_SIZE_X, 0);
+		copy_frame_to_vram(&ctx);
 
 		// Draw some text in front of the square (Z = 0, primitives with higher
 		// Z indices are drawn first and thus drawn "behind" this).
 		draw_text(&ctx, 8, 16, 0, "Hello, world 3!");
 
+		draw_ctl_monitor(&ctx, &ctl, /* page = */ 3 /*(frames >> 7) & 3*/);
+
 		// Draw a frames clock...
-		char clock_buff[8];
-		sprintf(clock_buff, /* sizeofarr(clock_buff), */ "c: %04d", frames);
-		draw_text(&ctx, 12, 24, 0, clock_buff);
-
-		char ctl_buff[24];
-		u8    huh = (frames >> 7) & 3;
-		char *what //
-			= huh == 0 ? "raw"
-			: huh == 1 ? "pressed"
-			: huh == 2 ? "released"
-					   : "prev raw";
-		u16 btn //
-			= huh == 0 ? ~ctl.buffer[0].button
-			: huh == 1 ? ctl.button[0].pressed
-			: huh == 2 ? ctl.button[0].released
-					   : ctl.button[0].internal.previous;
-
-		sprintf(ctl_buff, /* sizeofarr(ctl_buff), */
-			"btn: %c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-			(btn & (1 << BTN_SELECT)) ? 'S' : '_' /*'s'*/,
-			(btn & (1 << BTN_L3)) ? 'L' : '_' /*'l'*/,
-			(btn & (1 << BTN_R3)) ? 'R' : '_' /*'r'*/,
-			(btn & (1 << BTN_START)) ? 'S' : '_' /*'s'*/,
-			(btn & (1 << BTN_UP)) ? '^' : '_' /*'u'*/,
-			(btn & (1 << BTN_RIGHT)) ? '>' : '_' /*'r'*/,
-			(btn & (1 << BTN_DOWN)) ? 'v' : '_' /*'d'*/,
-			(btn & (1 << BTN_LEFT)) ? '<' : '_' /*'l'*/,
-			(btn & (1 << BTN_L2)) ? 'L' : '_' /*'l'*/,
-			(btn & (1 << BTN_R2)) ? 'R' : '_' /*'r'*/,
-			(btn & (1 << BTN_L1)) ? 'L' : '_' /*'l'*/,
-			(btn & (1 << BTN_R1)) ? 'R' : '_' /*'r'*/,
-			(btn & (1 << BTN_TRIANGLE)) ? 'T' : '_' /*'t'*/,
-			(btn & (1 << BTN_CIRCLE)) ? 'O' : '_' /*'o'*/,
-			(btn & (1 << BTN_CROSS)) ? 'X' : '_' /*'x'*/,
-			(btn & (1 << BTN_SQUARE)) ? 'Q' : '_' /*'q'*/);
-
-		draw_text(&ctx, 12, 212, 0, what);
-		draw_text(&ctx, 12, 220, 0, ctl_buff);
+		draw_frame_count(&ctx, frames);
 
 		flip_buffers(&ctx);
 
