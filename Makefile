@@ -11,6 +11,7 @@ ISO_TARGET = $(ISO_TARGET_DIR)/out
 SRCS = \
 	src/system/graphics.c src/system/gamepad.c \
 	src/helper/sine.c \
+	src/player.c \
 	src/main.c
 
 CFLAGS = -Wall -Wpedantic -Wextra

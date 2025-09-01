@@ -28,6 +28,8 @@
 
 #include "helper/sine.h" // -> isin, icos
 
+#include "player.h"
+
 // A simple helper for drawing text using [whatever]'s debug font API. Note that
 // FntSort() requires the debug font texture to be uploaded to VRAM beforehand
 // by calling FntLoad().
@@ -92,6 +94,16 @@ void draw_text(RenderContext *ctx, int x, int y, int z, const char *text) {
 	DR_TPAGE *tp = (DR_TPAGE *)new_primitive(ctx, z, sizeof(DR_TPAGE));
 	setDrawTPage(tp, 0, 0, 15);
 }
+
+/*
+my current microgoals are:
+- rotates a cube
+- pack a non-8x8 bitmap font using ?? CLUTs to pick which bitplane to draw
+
+resource
+- https://github.com/ABelliqueux/nolibgs_hello_worlds/wiki/OVL
+- https://github.com/Lameguy64/mkpsxiso/blob/master/examples/example.xml
+*/
 
 /* Main */
 
@@ -164,7 +176,7 @@ void draw_tri(RenderContext *ctx, int frames) {
 }
 
 void draw_oscillating_mirror_rect(RenderContext *ctx, int frames) {
-	int oscillate = isin(frames << 6) >> 11;
+	int oscillate = isin(frames << 6) >> 9;
 
 	POLY_FT4 *quad = (POLY_FT4 *)new_primitive(ctx, 2, sizeof(POLY_FT4));
 
@@ -277,8 +289,11 @@ int main(void) {
 	// SetGeomOffset(SCREEN_SIZE_X / 2, SCREEN_SIZE_Y / 2);
 	// SetGeomScreen(SCREEN_SIZE_Y / 2);
 
-	bounce_box box;
+	static bounce_box box;
 	setup_box(&box);
+
+	static e_player player;
+	setup_player(&player);
 
 	int frames = 0;
 
@@ -286,15 +301,20 @@ int main(void) {
 		update_gamepad(&ctl);
 
 		// Update the position and velocity of the bouncing square.
-		update_box(&box, &ctl);
+		// update_box(&box, &ctl);
+
+		control_player(&player, &ctl);
+		update_player(&player);
 
 		// Draw the square by allocating a TILE primitive at Z = 1.
 		// (Tiles are just untextured solid-color rectangles)
-		draw_box(&box, &ctx);
+		// draw_box(&box, &ctx);
 
-		draw_tri(&ctx, frames);
+		// draw_tri(&ctx, frames);
 
-		draw_oscillating_mirror_rect(&ctx, frames);
+		draw_player(&player, &ctx);
+
+		draw_oscillating_mirror_rect(&ctx, 0);
 
 		copy_frame_to_vram(&ctx);
 
@@ -302,7 +322,7 @@ int main(void) {
 		// Z indices are drawn first and thus drawn "behind" this).
 		draw_text(&ctx, 8, 16, 0, "Hello, world 3!");
 
-		draw_ctl_monitor(&ctx, &ctl, /* page = */ 3 /*(frames >> 7) & 3*/);
+		draw_ctl_monitor(&ctx, &ctl, /* page = 3 */ (frames >> 7) & 3);
 
 		// Draw a frames clock...
 		draw_frame_count(&ctx, frames);
